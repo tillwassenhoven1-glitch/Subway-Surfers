@@ -37,9 +37,10 @@ Keine Installation, kein Konto nötig – läuft auf Handy, iPad und PC. 🎮
 - 🔑 Schlüssel: nach Game Over weiterlaufen (1, 2, 4, 8 … 🔑)
 - 🛒 Shop: Power-up-Upgrades (6 Stufen), Hoverboards, Headstart, Score Booster, Mystery Box
 - 🧍 6 Figuren & 🎨 6 Board-Designs zum Freischalten
+- 🔐 Cheat-Menü (Code nötig 😉)
 - 💾 Highscore, Münzen & Fortschritt werden lokal gespeichert
 - 🗺️ Strecke wird zufällig zusammengesetzt – je weiter, desto mehr Züge
 
 ---
 
-Version 0.1.1 Open Beta
+Version 0.1.2 Open Beta

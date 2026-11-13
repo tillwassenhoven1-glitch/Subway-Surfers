@@ -91,14 +91,14 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 </div>
 <div id="ov"></div>
 <div id="toast"></div>
-<div id="ver">v0.1.1 Open Beta</div>
+<div id="ver">v0.1.2 Open Beta</div>
 
 <script>
 'use strict';
 /* =========================================================
    Rail Rush – Endless Runner (eigene Pseudo-3D-Engine, Canvas 2D)
    ========================================================= */
-const VERSION='0.1.1 Open Beta';
+const VERSION='0.1.2 Open Beta';
 const cv=document.getElementById('c'), ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,F=600,HY=200;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,1.75);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);F=Math.min(W*0.95,H*0.95);}
@@ -114,7 +114,7 @@ const hexc=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.sl
 const fmt=n=>Math.floor(n).toLocaleString('de-DE');
 
 /* ---------- Konstanten ---------- */
-const LANES=[-2.5,0,2.5], ROOF=3.0, NEAR=0.6, FAR=170, GRAV=34, JUMP_V=11.2, SNEAK_V=17, JET_Y=8.5;
+const LANE_T=0.17, LANES=[-2.5,0,2.5], ROOF=3.0, NEAR=0.6, FAR=170, GRAV=34, JUMP_V=11.2, SNEAK_V=17, JET_Y=8.5;
 const SKY=hexc('#a8d8f0'), SKY_TOP='#4fa3d8';
 const C={grey:hexc('#cfd8dc'),dark:hexc('#263238'),yel:hexc('#ffd600'),red:hexc('#e53935'),white:hexc('#f5f5f5'),win:hexc('#1a2a3a'),post:hexc('#90a4ae'),fence:hexc('#8d6e63'),ramp:hexc('#78909c'),tunnel:hexc('#5d4037'),mast:hexc('#455a64'),gold:hexc('#ffc107')};
 const TRAIN_COLS=['#1565c0','#2e7d32','#c62828','#6a1b9a','#00838f','#ef6c00','#37474f'].map(hexc);
@@ -185,7 +185,7 @@ function newSet(){const r=mulberry(save.set*7919+13);const keys=Object.keys(MT);
 if(!save.missions)newSet();
 function stat(name,amt){
  if(MT_RUNKEYS.has(name))runStats[name]=(runStats[name]||0)+amt;
- let changed=false;
+ let changed=name==='_';
  for(const m of save.missions){if(m.done)continue;const t=MT[m.k];
   if(t.tot===name){m.prog+=amt;changed=true;}
   if(t.run===name){m.prog=Math.max(m.prog,runStats[name]-m.base);changed=true;}
@@ -210,14 +210,14 @@ const sfx={coin(){snd(1250,.07,'square',.03);snd(1660,.09,'square',.03,.05);},ju
 let obs=[],coins=[],items=[],decor=[],genS=0;
 let G={state:'menu',t:0,s:0,v:0,score:0,coins:0,cont:0,shake:0,dieT:0,contT:0,boostWindow:0,sbActive:false,dieReason:''};
 let P={};
-let guard={d:3,x:0};
+let guard={d:3,x:0,y:0,ph:0};
 let pw={jetpack:0,sneakers:0,magnet:0,double:0,headstart:0,board:0};
 let boardCd=0, invuln=0, stumbleT=0, jetCoinS=0;
 
-function resetPlayer(){P={lane:1,prevLane:1,x:0,y:0,vy:0,ground:true,roll:0,rollQ:false,phase:0,airTuck:0};}
+function resetPlayer(){P={lane:1,prevLane:1,x:0,lx:0,lt:1,y:0,vy:0,ground:true,roll:0,rollQ:false,phase:0,airTuck:0};}
 function resetWorld(){
  obs=[];coins=[];items=[];decor=[];genS=0;G.s=0;G.t=0;G.score=0;G.coins=0;G.cont=0;G.v=0;G.sbActive=false;
- for(const k in pw)pw[k]=0;boardCd=0;invuln=0;stumbleT=0;guard={d:2.6,x:0};resetPlayer();
+ for(const k in pw)pw[k]=0;boardCd=0;invuln=0;stumbleT=0;guard={d:2.4,x:0,y:0,ph:0};resetPlayer();
  coinLine(1,14,36,0.8);decorChunk(-20,60);genS=40;
  while(genS<G.s+FAR+40)genS+=genChunk(genS);
 }
@@ -283,7 +283,7 @@ function groundAt(x,s,y){let g=0;
 function speed(){let v=13+Math.min(17,G.t*.07);if(pw.headstart>0)v*=2.4;return v;}
 const flying=()=>pw.jetpack>0||pw.headstart>0;
 
-function moveLane(dir){if(G.state!=='run')return;const nl=clamp(P.lane+dir,0,2);if(nl===P.lane)return;P.prevLane=P.lane;P.lane=nl;stat('lanes',1);snd(520,.05,'triangle',.03);}
+function moveLane(dir){if(G.state!=='run')return;const nl=clamp(P.lane+dir,0,2);if(nl===P.lane)return;P.prevLane=P.lane;P.lane=nl;P.lx=P.x;P.lt=0;stat('lanes',1);snd(520,.05,'triangle',.03);}
 function jump(){if(G.state!=='run'||flying())return;if(P.ground&&P.vy<=0.01){P.vy=pw.sneakers>0?SNEAK_V:JUMP_V;P.ground=false;P.roll=0;stat('jumps',1);sfx.jump();}}
 function roll(){if(G.state!=='run'||flying())return;if(!P.ground){P.vy=-30;P.rollQ=true;}else{if(P.roll<=0)stat('rolls',1);P.roll=.7;sfx.roll();}}
 function useBoard(){if(G.state!=='run')return;if(pw.board>0||boardCd>0||save.boards<=0)return;save.boards--;persist();pw.board=30;stat('boards',1);sfx.board();toast('🛹 Hoverboard aktiv!');}
@@ -299,7 +299,7 @@ function update(dt){
  if(boardCd>0)boardCd-=dt;if(invuln>0)invuln-=dt;if(G.boostWindow>0)G.boostWindow-=dt;
  if(stumbleT>0){stumbleT-=dt;if(stumbleT<=0)toast('😮‍💨 Abgehängt!');}
  // Spurwechsel
- const tx=LANES[P.lane];P.x+= (tx-P.x)*Math.min(1,dt*16);if(Math.abs(tx-P.x)<.01)P.x=tx;
+ const tx=LANES[P.lane];P.lt=Math.min(1,P.lt+dt/LANE_T);const e=1-Math.pow(1-P.lt,3);P.x=lerp(P.lx,tx,e);
  // Vertikal
  if(flying()){P.y=lerp(P.y,JET_Y,Math.min(1,dt*3));P.vy=0;P.ground=false;P.roll=0;
   while(jetCoinS<G.s+90){const l=Math.round(1+Math.sin(jetCoinS*.045)*1.2);addCoin(clamp(l,0,2),jetCoinS,JET_Y+0.8);jetCoinS+=2.4;}}
@@ -321,7 +321,7 @@ function update(dt){
  // Score & Distanz
  const sc=ds*curMult();G.score+=sc;stat('dist',ds);stat('score',sc);
  // Kontrolleur
- guard.d=lerp(guard.d,stumbleT>0?1.9:16,dt*(stumbleT>0?4:.7));guard.x=lerp(guard.x,P.x,dt*5);
+ guard.d=lerp(guard.d,stumbleT>0?2.4:18,dt*(stumbleT>0?6:.8));guard.x=lerp(guard.x,P.x,dt*6);guard.y=lerp(guard.y||0,flying()?0:P.y,dt*8);guard.ph=(guard.ph||0)+dt*v*.55;
  // Generieren & Aufräumen
  while(genS<G.s+FAR+40)genS+=genChunk(genS);
  if((G.t*10|0)%10===0){const lim=G.s-12;obs=obs.filter(o=>o.s1>lim);coins=coins.filter(c=>!c.taken&&c.s>lim);items=items.filter(i=>!i.taken&&i.s>lim);decor=decor.filter(d=>(d.s1??d.s)>lim);}
@@ -333,7 +333,7 @@ function clearLaneFor(t){const x=LANES[t.lane];
  coins=coins.filter(c=>Math.abs(c.x-x)>.5||c.s<G.s+3||c.s>t.s0);items=items.filter(i=>Math.abs(i.x-x)>.5||i.s<G.s+3||i.s>t.s0);}
 function underHigh(){for(const o of obs)if(o.kind==='bar'&&!isLow(o.type)&&Math.abs(P.x-LANES[o.lane])<1.4&&G.s+0.4>o.s0&&G.s-0.4<o.s1)return true;return false;}
 function collide(prev){
- if(flying()||G.state!=='run')return;
+ if(flying()||G.state!=='run'||save.god)return;
  const ph=P.roll>0?0.8:1.7;
  for(const o of obs){if(o.kind==='ramp'||o.ignore)continue;
   const ox=LANES[o.lane],hw=o.kind==='train'?1.05:1.15;let y0,y1;
@@ -344,12 +344,13 @@ function collide(prev){
   const yOv=P.y+ph>y0&&P.y<y1-0.05;if(!yOv)continue;
   if(invuln>0)continue;
   const psOv=prev.s+0.4>o.ps0&&prev.s-0.4<o.ps1, pxOv=Math.abs(prev.x-ox)<hw+0.35;
-  if(psOv&&!pxOv){stumble();P.lane=P.prevLane;P.x=prev.x;return;}
+  if(psOv&&!pxOv){stumble();P.lane=P.prevLane;P.x=prev.x;P.lx=P.x;P.lt=0;return;}
   if(o.kind==='train'&&P.y>=y1-0.95&&P.vy<=0){P.y=y1;P.vy=0;P.ground=true;continue;}
   if(pw.board>0){pw.board=0;boardCd=4;invuln=1.2;o.ignore=true;G.shake=.4;sfx.crash();toast('💥 Hoverboard kaputt!');continue;}
   die('crash');return;}
 }
 function stumble(){
+ if(save.god)return;
  if(stumbleT>0){die('caught');return;}
  stumbleT=7;G.shake=.25;sfx.stumble();toast('😬 Gestolpert!');
 }
@@ -389,7 +390,7 @@ function doContinue(){
  const cost=2**G.cont;if(save.keys<cost)return;save.keys-=cost;G.cont++;persist();
  obs=obs.filter(o=>!(o.s1>G.s-6&&o.s0<G.s+35&&!o.moving)&&!(o.moving&&o.s0<G.s+80));
  for(const o of obs){o.ps0=o.s0;o.ps1=o.s1;}
- P.lane=P.prevLane=P.lane;P.x=LANES[P.lane];P.y=0;P.vy=0;P.roll=0;stumbleT=0;invuln=3;guard.d=6;
+ P.lane=P.prevLane=P.lane;P.x=P.lx=LANES[P.lane];P.lt=1;P.y=0;P.vy=0;P.roll=0;stumbleT=0;invuln=3;guard.d=6;
  G.state='run';ov.innerHTML='';ov.className='';hud.classList.remove('hidden');sfx.power();toast('🔑 Weiter geht\'s!');
 }
 function gameOver(){
@@ -440,7 +441,7 @@ function renderMenu(){
   <div class="tap">👆 Tippe zum Starten</div>
   <div style="width:100%;display:flex;flex-direction:column;align-items:center">
    <div class="menuBtns"><button class="btn o" data-act="shop">🛒 Shop</button><button class="btn b" data-act="missions">🎯 Missionen</button><button class="btn g" data-act="help">❓ Hilfe</button></div>
-   <div class="menuBtns"><button class="btn g" data-act="mute">${save.mute?'🔇 Ton aus':'🔊 Ton an'}</button><button class="btn" data-act="play">▶ Spielen</button></div>
+   <div class="menuBtns"><button class="btn g" data-act="mute">${save.mute?'🔇':'🔊'}</button><button class="btn g" data-act="cheat">🔐 Cheats</button><button class="btn" data-act="play">▶ Spielen</button></div>
   </div></div>`;
 }
 let shopTab='up';
@@ -474,6 +475,33 @@ function renderHelp(){G.state='menu';ov.className='dim';ov.innerHTML=`<div class
  🪙 Münzen sammeln, im Shop ausgeben · 🔑 Schlüssel = Weiterlaufen nach Game Over<br>
  🚀 Jetpack · 👟 Super-Sneaker · 🧲 Magnet · ✖️ 2× Score · 🎁 Mystery Box</div>
  <button class="btn g" data-act="menu">⬅ Zurück</button></div>`;}
+let cheatOk=false;
+function renderCheatLogin(err){G.state='menu';ov.className='dim';ov.innerHTML=`<div class="card"><h2>🔐 Cheat-Menü</h2>
+ <div class="cen" style="margin-bottom:8px">Code eingeben:</div>
+ <input id="cheatIn" type="password" autocomplete="off" style="width:100%;padding:12px;border-radius:12px;border:2px solid #fff3;background:#0006;color:#fff;font-size:20px;text-align:center;user-select:text;-webkit-user-select:text">
+ ${err?'<div class="cen" style="color:#ff5252;margin-top:6px">❌ Falscher Code</div>':''}
+ <button class="btn" data-act="cheatGo">🔓 Öffnen</button><button class="btn g" data-act="menu">⬅ Zurück</button></div>`;
+ const i=$('cheatIn');i.focus();i.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')checkCheat();});}
+function checkCheat(){const v=($('cheatIn')?.value||'').trim().toLowerCase();if(v==='till'){cheatOk=true;sfx.key();renderCheats();}else renderCheatLogin(true);}
+function renderCheats(){G.state='menu';ov.className='dim';const c=(a,t,cls='b')=>`<button class="btn ${cls}" data-act="ch" data-v="${a}">${t}</button>`;
+ ov.innerHTML=`<div class="card"><h2>😎 Cheats</h2><div class="stats" style="margin:0 0 6px"><span class="pill">🪙 ${fmt(save.coins)}</span><span class="pill">🔑 ${save.keys}</span><span class="pill">✖️ ${baseMult()}</span></div>
+ <div class="row">${c('coins','+10.000 🪙','o')}${c('coins100','+100.000 🪙','o')}</div>
+ <div class="row">${c('keys','+10 🔑')}${c('boards','+10 🛹')}</div>
+ <div class="row">${c('hs','+5 🚀 Headstart')}${c('sb','+5 ⚡ Booster')}</div>
+ <div class="row">${c('upmax','⬆️ Alle Upgrades MAX')}${c('unlock','🔓 Alles freischalten')}</div>
+ <div class="row">${c('mult','✖️ Multiplikator ×30')}${c('mis','🎯 Missionen erledigen')}</div>
+ ${c('god',save.god?'🛡️ Unverwundbar: AN':'🛡️ Unverwundbar: AUS',save.god?'':'g')}
+ ${c('reset','🗑️ Spielstand zurücksetzen','g')}
+ <button class="btn g" data-act="menu">⬅ Zurück</button></div>`;}
+function doCheat(v){
+ if(v==='coins')save.coins+=10000;else if(v==='coins100')save.coins+=100000;else if(v==='keys')save.keys+=10;else if(v==='boards')save.boards+=10;
+ else if(v==='hs')save.hs+=5;else if(v==='sb')save.sb+=5;else if(v==='upmax'){for(const k in save.up)save.up[k]=6;}
+ else if(v==='unlock'){save.chars=Object.keys(CHARS);save.boardsOwned=Object.keys(BOARDS);}
+ else if(v==='mult'){save.set=29;newSet();}else if(v==='mis'){for(const m of save.missions){m.prog=m.target;m.done=true;}stat('_',0);}
+ else if(v==='god')save.god=!save.god;
+ else if(v==='reset'){if(!confirmReset){confirmReset=true;toast('⚠️ Nochmal drücken zum Zurücksetzen');return;}save=defSave();newSet();cheatOk=false;confirmReset=false;persist();toast('🗑️ Zurückgesetzt');renderMenu();return;}
+ confirmReset=false;persist();sfx.buy();toast('✅ Cheat aktiviert');renderCheats();}
+let confirmReset=false;
 let contTimer=null;
 function renderContinue(cost){hud.classList.add('hidden');ov.className='dim';const can=save.keys>=cost;
  ov.innerHTML=`<div class="card cen"><h2>${G.dieReason==='caught'?'👮 Erwischt!':'💥 Crash!'}</h2>
@@ -504,6 +532,9 @@ document.addEventListener('click',e=>{
   case 'help':renderHelp();break;
   case 'menu':resetWorld();renderMenu();break;
   case 'mute':save.mute=!save.mute;persist();renderMenu();break;
+  case 'cheat':cheatOk?renderCheats():renderCheatLogin(false);break;
+  case 'cheatGo':checkCheat();break;
+  case 'ch':doCheat(v);break;
   case 'pause':pause();break;
   case 'resume':resume();break;
   case 'quit':G.state='dying';G.dieT=0;G.dieReason='quit';gameOver();break;
@@ -580,7 +611,7 @@ function drawTrainSeg(o,a,b,first){
  const fg=box(x0,x1,.3,ROOF,a,b,o.c,{noFront:!first,top:C.grey,front:o.moving?C.yel:o.c});
  if(fg<0)return;const dz=a-cam.s;if(dz>110)return;
  const wc=col(C.win,1,fg);
- const ca=Math.max(a,cam.s+NEAR);if(b-ca>1.4){const wa=ca+.45,wb=b-.45;
+ const ca=Math.max(a,cam.s+NEAR);if(a>=cam.s+NEAR&&b-ca>1.4){const wa=ca+.45,wb=b-.45;
   if(cam.x<x0)quad(P3(x0-.01,1.55,wa),P3(x0-.01,2.45,wa),P3(x0-.01,2.45,wb),P3(x0-.01,1.55,wb),wc);
   if(cam.x>x1)quad(P3(x1+.01,1.55,wa),P3(x1+.01,2.45,wa),P3(x1+.01,2.45,wb),P3(x1+.01,1.55,wb),wc);}
  if(first&&a>cam.s+NEAR+.05&&a===o.s0){const s=a-.01;
@@ -617,16 +648,16 @@ function drawDecor(d){
  else if(d.kind==='mast'){box(d.x-.1,d.x+.1,0,4.2,d.s,d.s+.2,C.mast);box(d.x-.3,d.x+.3,3.6,4.4,d.s-.05,d.s+.1,C.dark);const g=(d.s|0)%2;circ(d.x,4.15,d.s-.07,.12,g?'#00e676':'#ff1744');circ(d.x,3.85,d.s-.07,.12,'#333');}
 }
 function drawFigure(x,y,s,c,o){
- o=o||{};const sw=o.air?0:Math.sin(P.phase)*.32*(o.still?0:1);
+ o=o||{};const ph=o.ph??P.phase;const sw=o.air?0:Math.sin(ph)*.36*(o.still?0:1);const ln=o.lean||0;if(!o.air&&!o.still&&!o.roll)y+=Math.abs(Math.cos(ph))*.07;
  if(o.roll){box(x-.34,x+.34,y,y+.62,s-.3,s+.3,c.shirt,{front:c.pants});box(x-.2,x+.2,y+.5,y+.82,s-.15,s+.2,c.skin,{front:c.hair,top:c.cap});return;}
  const lh=o.air?.55:.8;
  box(x-.22,x-.04,y,y+.14,s-.15+sw,s+.15+sw,C.white);box(x+.04,x+.22,y,y+.14,s-.15-sw,s+.15-sw,C.white);
  box(x-.22,x-.04,y+.12,y+lh,s-.12+sw*.8,s+.12+sw*.8,c.pants);box(x+.04,x+.22,y+.12,y+lh,s-.12-sw*.8,s+.12-sw*.8,c.pants);
- box(x-.29,x+.29,y+.75,y+1.34,s-.17,s+.17,c.shirt);
- box(x-.43,x-.29,y+.82,y+1.3,s-.1-sw*.7,s+.1-sw*.7,c.shirt,{bot:c.skin});box(x+.29,x+.43,y+.82,y+1.3,s-.1+sw*.7,s+.1+sw*.7,c.shirt,{bot:c.skin});
- box(x-.19,x+.19,y+1.33,y+1.68,s-.18,s+.18,c.skin,{front:c.hair});
- box(x-.21,x+.21,y+1.6,y+1.76,s-.2,s+.2,c.cap);
- if(o.badge)circ(x,y+1.0,s-.18,.07,'#ffd600');
+ const bx=x+ln*.5,hx=x+ln;box(bx-.29,bx+.29,y+.75,y+1.34,s-.17,s+.17,c.shirt);
+ box(bx-.43,bx-.29,y+.82,y+1.3,s-.1-sw*.7,s+.1-sw*.7,c.shirt,{bot:c.skin});box(bx+.29,bx+.43,y+.82,y+1.3,s-.1+sw*.7,s+.1+sw*.7,c.shirt,{bot:c.skin});
+ box(hx-.19,hx+.19,y+1.33,y+1.68,s-.18,s+.18,c.skin,{front:c.hair});
+ box(hx-.21,hx+.21,y+1.6,y+1.76,s-.2,s+.2,c.cap);
+ if(o.badge)circ(bx,y+1.0,s-.18,.07,'#ffd600');
 }
 const charCols=k=>{const c=CHARS[k]||CHARS.nico;return{shirt:hexc(c.shirt),pants:hexc(c.pants),skin:hexc(c.skin),cap:hexc(c.cap),hair:hexc(c.hair)};};
 const GUARD={shirt:hexc('#283593'),pants:hexc('#1a237e'),skin:hexc('#e0ac69'),cap:hexc('#1a237e'),hair:hexc('#3e2723')};
@@ -638,18 +669,20 @@ function drawPlayer(){
  if(flying()){box(x-.24,x+.24,y+.8,y+1.4,s-.36,s-.17,hexc('#90a4ae'));const fl=.25+Math.random()*.25;
   for(const fx of [-.13,.13]){const a=P3(x+fx-.08,y+.8,s-.27),b=P3(x+fx+.08,y+.8,s-.27),t=P3(x+fx,y+.8-fl*2,s-.27);ctx.fillStyle='#ff9100';ctx.beginPath();ctx.moveTo(...a);ctx.lineTo(...b);ctx.lineTo(...t);ctx.fill();}}
  if(pw.sneakers>0&&!flying()){ctx.globalAlpha=.4;circ(x,y+.08,s,.3,'#76ff03');ctx.globalAlpha=1;}
- drawFigure(x,y,s,c,{roll:P.roll>0,air:!P.ground&&!flying(),still:G.state==='menu'});
+ drawFigure(x,y,s,c,{roll:P.roll>0,air:!P.ground&&!flying(),still:G.state==='menu',lean:clamp((LANES[P.lane]-P.x)*.12,-.18,.18)});
 }
 function drawGuard(){
- const s=G.s-guard.d;if(s-cam.s<NEAR+.3)return;const side=guard.x>0.5?-1:1;const x=guard.x+side*1.05;
- drawFigure(x,0,s,GUARD,{badge:true,still:G.state==='menu'});
- const dx=x+side*.8,ds=s+.2;box(dx-.18,dx+.18,.25,.62,ds-.45,ds+.4,hexc('#8d6e63'));box(dx-.15,dx+.15,.45,.85,ds+.3,ds+.65,hexc('#6d4c41'),{front:hexc('#5d4037')});
+ const s=G.s-guard.d;if(s-cam.s<NEAR+.3)return;const side=guard.x>0.5?-1:1;const x=guard.x+side*(G.state==='menu'?1.05:.75);const gy=guard.y||0;
+ if(stumbleT>0&&G.state==='run'){const q=P3(x,gy+2.25,s),fs=Math.max(8,(.55+.06*Math.sin(G.t*12))*F/(s-cam.s));ctx.font=`${fs|0}px system-ui,"Segoe UI Emoji","Apple Color Emoji",sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('❗',q[0],q[1]);}
+ drawFigure(x,gy,s,GUARD,{badge:true,still:G.state==='menu',ph:guard.ph});
+ const dx=x+side*.8,ds=s+.2;if(gy>0.3)return;box(dx-.18,dx+.18,.25,.62,ds-.45,ds+.4,hexc('#8d6e63'));box(dx-.15,dx+.15,.45,.85,ds+.3,ds+.65,hexc('#6d4c41'),{front:hexc('#5d4037')});
  box(dx-.15,dx-.07,.75,.95,ds+.32,ds+.42,hexc('#4e342e'));box(dx+.07,dx+.15,.75,.95,ds+.32,ds+.42,hexc('#4e342e'));
 }
 function render(){
  // Kamera
  const ty=(flying()?P.y*.85+3.2:Math.min(P.y,ROOF)*.75+3.9);
- cam.x=lerp(cam.x,P.x*.55,.12);cam.y=lerp(cam.y,ty,.08);cam.s=G.s-6.8;
+ const cdt=Math.min(.05,(performance.now()-(render.lt||performance.now()))/1000);render.lt=performance.now();
+ cam.x=lerp(cam.x,P.x*.6,1-Math.exp(-cdt*9));cam.y=lerp(cam.y,ty,1-Math.exp(-cdt*5));cam.s=G.s-6.8;
  const feetDz=6.8;HY=clamp(H*.84-(cam.y-(flying()?P.y:0))*F/feetDz,H*.08,H*.6);
  ctx.save();if(G.shake>0){ctx.translate((rnd()-.5)*G.shake*24,(rnd()-.5)*G.shake*24);}
  drawGround();
@@ -658,9 +691,10 @@ function render(){
    add(a,5,()=>{box(-5.5,-4.85,0,7.2,a,b,C.tunnel,{noFront:!first});box(4.85,5.5,0,7.2,a,b,C.tunnel,{noFront:!first});box(-5.5,5.5,6.6,7.6,a,b,C.tunnel,{noFront:!first,bot:hexc('#3e2723')});});}}
   else if(d.kind==='fence'){const x=d.side*4.75;for(let a=Math.max(d.s0,Math.floor(cam.s/4)*4);a<d.s1;a+=4){if(a>cam.s+FAR)break;const A=a,b=Math.min(a+4,d.s1);add(Math.max(A,cam.s),Math.abs(x-cam.x),()=>box(x-.08,x+.08,0,.9,A,b,C.fence,{noFront:A!==d.s0}));}}
   else{const s=d.s0??d.s;add(s,Math.abs((d.x0??d.x)-cam.x),()=>drawDecor(d));}}
+ const gS=G.s-guard.d;const kf=(a,b)=>((a<G.s+.5&&b>G.s-1)||(a<gS+.5&&b>gS-1))?b:Math.max(a,cam.s);
  for(const o of obs){if(o.s1<cam.s||o.s0>cam.s+FAR)continue;const lat=Math.abs(LANES[o.lane]-cam.x);
-  if(o.kind==='train'){for(let a=o.s0;a<o.s1;a+=4){if(a+4<cam.s)continue;if(a>cam.s+FAR)break;const b=Math.min(a+4,o.s1),A=a,first=a===o.s0;add(Math.max(a,cam.s),lat,()=>drawTrainSeg(o,A,b,first||A<cam.s+NEAR));}}
-  else if(o.kind==='ramp')add(o.s0,lat,()=>drawRamp(o));else add(o.s0,lat,()=>drawBar(o));}
+  if(o.kind==='train'){for(let a=o.s0;a<o.s1;a+=3){if(a+3<cam.s)continue;if(a>cam.s+FAR)break;const b=Math.min(a+3,o.s1),A=a,first=a===o.s0;add(kf(a,b),lat,()=>drawTrainSeg(o,A,b,first||A<cam.s+NEAR));}}
+  else if(o.kind==='ramp')add(kf(o.s0,o.s1),lat,()=>drawRamp(o));else add(o.s0,lat,()=>drawBar(o));}
  for(const c of coins)if(!c.taken&&c.s>cam.s&&c.s<cam.s+FAR)add(c.s,Math.abs(c.x-cam.x),()=>drawCoin(c));
  for(const it of items)if(!it.taken&&it.s>cam.s&&it.s<cam.s+FAR)add(it.s,Math.abs(it.x-cam.x),()=>drawItem(it));
  add(G.s-.3,0,drawPlayer);
