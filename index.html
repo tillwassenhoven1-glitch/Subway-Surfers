@@ -91,14 +91,14 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 </div>
 <div id="ov"></div>
 <div id="toast"></div>
-<div id="ver">v0.1.3 Open Beta</div>
+<div id="ver">v0.1.4 Open Beta</div>
 
 <script>
 'use strict';
 /* =========================================================
    Rail Rush – Endless Runner (eigene Pseudo-3D-Engine, Canvas 2D)
    ========================================================= */
-const VERSION='0.1.3 Open Beta';
+const VERSION='0.1.4 Open Beta';
 const cv=document.getElementById('c'), ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,F=600,HY=200;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,1.75);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);F=Math.min(W*0.95,H*0.95);}
@@ -692,12 +692,12 @@ function drawDecor(d){
   if(d.ac)box(d.x0+1,d.x0+2.2,d.h,d.h+.8,d.s0+1,d.s0+2.2,hexc('#cfd8dc'));
   if(d.tank){const tx=(d.x0+d.x1)/2;box(tx-.08,tx+.08,d.h,d.h+1.2,d.s0+2,d.s0+2.15,C.dark);box(tx-.8,tx+.8,d.h+1.1,d.h+2.6,d.s0+1.5,d.s0+3,hexc('#8d6e63'),{top:hexc('#6d4c41')});}
   if(d.s0-cam.s>100)return;
-  const fx=d.x0>0?d.x0-.01:d.x1+.01;const a=Math.max(d.s0,cam.s+NEAR)+.4,b=d.s1-.4;if(b<=a)return;
+  const fx=d.x0>0?d.x0-.01:d.x1+.01;const ms=cam.s+NEAR,a0=d.s0+.4,a=Math.max(a0,ms),b=d.s1-.4;if(b<=a)return;
   // Ladenzeile mit Markise
   if(d.aw){sideQ(fx,.2,2.1,a,b,col([45,60,72],1,fg));sideQ(d.x0>0?fx-.02:fx+.02,2.1,2.6,a-.2,b+.2,col(hexc(d.aw),1,fg));}
   // Fenster einzeln
   const wc=col([38,52,66],1,fg),lc=col([255,214,120],1,fg),fr=col([230,230,225],1,fg);
-  for(let y=d.aw?3.2:1.4,row=0;y<d.h-.9;y+=1.8,row++){for(let z=a,k=0;z+1.1<b;z+=1.7,k++){
+  for(let y=d.aw?3.2:1.4,row=0;y<d.h-.9;y+=1.8,row++){for(let z=a0,k=0;z+1.1<b;z+=1.7,k++){if(z-.08<ms)continue;
    const lit=d.lit&&((row*5+k*3+(d.s0|0))%4===0);sideQ(fx,y-.08,y+.98,z-.08,z+1.18,fr);sideQ(fx,y,y+.9,z,z+1.1,lit?lc:wc);}}}
  else if(d.kind==='mast'){box(d.x-.1,d.x+.1,0,4.2,d.s,d.s+.2,C.mast);box(d.x-.3,d.x+.3,3.6,4.4,d.s-.05,d.s+.1,C.dark);const g=(d.s|0)%2;circ(d.x,4.15,d.s-.07,.12,g?'#00e676':'#ff1744');circ(d.x,3.85,d.s-.07,.12,'#333');}
  else if(d.kind==='tree'){box(d.x-.12,d.x+.12,0,d.h*.45,d.s-.12,d.s+.12,hexc('#6d4c41'));
