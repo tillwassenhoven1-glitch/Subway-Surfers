@@ -91,14 +91,14 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 </div>
 <div id="ov"></div>
 <div id="toast"></div>
-<div id="ver">v0.1 Open Beta</div>
+<div id="ver">v0.1.1 Open Beta</div>
 
 <script>
 'use strict';
 /* =========================================================
    Rail Rush – Endless Runner (eigene Pseudo-3D-Engine, Canvas 2D)
    ========================================================= */
-const VERSION='0.1 Open Beta';
+const VERSION='0.1.1 Open Beta';
 const cv=document.getElementById('c'), ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,F=600,HY=200;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,1.75);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);F=Math.min(W*0.95,H*0.95);}
@@ -223,7 +223,7 @@ function resetWorld(){
 }
 function addTrain(lane,s0,len,opt={}){const o={kind:'train',lane,s0,s1:s0+len,ps0:s0,ps1:s0+len,c:pick(TRAIN_COLS),moving:!!opt.moving,v:opt.v||0,active:!opt.moving};obs.push(o);return o;}
 function addRamp(lane,s0,len){obs.push({kind:'ramp',lane,s0,s1:s0+len,ps0:s0,ps1:s0+len});}
-function addBar(lane,s,type){obs.push({kind:'bar',type,lane,s0:s,s1:s+0.35,ps0:s,ps1:s+0.35});}
+function addBar(lane,s,type){if(obs.some(o=>o.kind!=='bar'&&o.lane===lane&&s+0.35>o.s0-1&&s<o.s1+1))return;obs.push({kind:'bar',type,lane,s0:s,s1:s+0.35,ps0:s,ps1:s+0.35});}
 function addCoin(lane,s,y){coins.push({x:LANES[lane],s,y,taken:false,ph:rnd()*6});}
 function topAt(lane,s){let h=0;for(const o of obs){if(o.lane!==lane||s<o.s0||s>o.s1)continue;if(o.kind==='train')h=Math.max(h,ROOF);else if(o.kind==='ramp')h=Math.max(h,ROOF*(s-o.s0)/(o.s1-o.s0));}return h;}
 function coinLine(lane,a,b,y){for(let s=a;s<=b;s+=2.3)addCoin(lane,s,y!=null?y:topAt(lane,s)+0.8);}
@@ -284,7 +284,7 @@ function speed(){let v=13+Math.min(17,G.t*.07);if(pw.headstart>0)v*=2.4;return v
 const flying=()=>pw.jetpack>0||pw.headstart>0;
 
 function moveLane(dir){if(G.state!=='run')return;const nl=clamp(P.lane+dir,0,2);if(nl===P.lane)return;P.prevLane=P.lane;P.lane=nl;stat('lanes',1);snd(520,.05,'triangle',.03);}
-function jump(){if(G.state!=='run'||flying())return;if(P.ground||P.y-P.g<0.08){P.vy=pw.sneakers>0?SNEAK_V:JUMP_V;P.ground=false;P.roll=0;stat('jumps',1);sfx.jump();}}
+function jump(){if(G.state!=='run'||flying())return;if(P.ground&&P.vy<=0.01){P.vy=pw.sneakers>0?SNEAK_V:JUMP_V;P.ground=false;P.roll=0;stat('jumps',1);sfx.jump();}}
 function roll(){if(G.state!=='run'||flying())return;if(!P.ground){P.vy=-30;P.rollQ=true;}else{if(P.roll<=0)stat('rolls',1);P.roll=.7;sfx.roll();}}
 function useBoard(){if(G.state!=='run')return;if(pw.board>0||boardCd>0||save.boards<=0)return;save.boards--;persist();pw.board=30;stat('boards',1);sfx.board();toast('🛹 Hoverboard aktiv!');}
 
@@ -309,7 +309,7 @@ function update(dt){
  if(P.roll>0){P.roll-=dt;if(P.roll<=0&&underHigh())P.roll=.12;}
  P.phase+=dt*v*.55;
  // bewegte Züge
- for(const o of obs){o.ps0=o.s0;o.ps1=o.s1;if(o.moving){if(!o.active&&G.s>o.s0-110)o.active=true;if(o.active){o.s0-=o.v*dt;o.s1-=o.v*dt;}}}
+ for(const o of obs.slice()){o.ps0=o.s0;o.ps1=o.s1;if(o.moving){if(!o.active&&G.s>o.s0-110){o.active=true;clearLaneFor(o);}if(o.active){o.s0-=o.v*dt;o.s1-=o.v*dt;}}}
  collide(prev);
  if(G.state!=='run')return;
  // Münzen
@@ -328,6 +328,9 @@ function update(dt){
  G.shake=Math.max(0,G.shake-dt*2);
 }
 const curMult=()=>(baseMult()+(G.sbActive?5:0))*(pw.double>0?2:1);
+function clearLaneFor(t){const x=LANES[t.lane];
+ obs=obs.filter(o=>o===t||o.lane!==t.lane||o.s1<G.s+3||o.s0>t.s0);
+ coins=coins.filter(c=>Math.abs(c.x-x)>.5||c.s<G.s+3||c.s>t.s0);items=items.filter(i=>Math.abs(i.x-x)>.5||i.s<G.s+3||i.s>t.s0);}
 function underHigh(){for(const o of obs)if(o.kind==='bar'&&!isLow(o.type)&&Math.abs(P.x-LANES[o.lane])<1.4&&G.s+0.4>o.s0&&G.s-0.4<o.s1)return true;return false;}
 function collide(prev){
  if(flying()||G.state!=='run')return;
@@ -342,7 +345,7 @@ function collide(prev){
   if(invuln>0)continue;
   const psOv=prev.s+0.4>o.ps0&&prev.s-0.4<o.ps1, pxOv=Math.abs(prev.x-ox)<hw+0.35;
   if(psOv&&!pxOv){stumble();P.lane=P.prevLane;P.x=prev.x;return;}
-  if(o.kind==='train'&&P.y>=y1-0.95){P.y=y1;P.vy=0;P.ground=true;continue;}
+  if(o.kind==='train'&&P.y>=y1-0.95&&P.vy<=0){P.y=y1;P.vy=0;P.ground=true;continue;}
   if(pw.board>0){pw.board=0;boardCd=4;invuln=1.2;o.ignore=true;G.shake=.4;sfx.crash();toast('💥 Hoverboard kaputt!');continue;}
   die('crash');return;}
 }
@@ -577,7 +580,7 @@ function drawTrainSeg(o,a,b,first){
  const fg=box(x0,x1,.3,ROOF,a,b,o.c,{noFront:!first,top:C.grey,front:o.moving?C.yel:o.c});
  if(fg<0)return;const dz=a-cam.s;if(dz>110)return;
  const wc=col(C.win,1,fg);
- if(b-a>1.4){const wa=a+.45,wb=b-.45;
+ const ca=Math.max(a,cam.s+NEAR);if(b-ca>1.4){const wa=ca+.45,wb=b-.45;
   if(cam.x<x0)quad(P3(x0-.01,1.55,wa),P3(x0-.01,2.45,wa),P3(x0-.01,2.45,wb),P3(x0-.01,1.55,wb),wc);
   if(cam.x>x1)quad(P3(x1+.01,1.55,wa),P3(x1+.01,2.45,wa),P3(x1+.01,2.45,wb),P3(x1+.01,1.55,wb),wc);}
  if(first&&a>cam.s+NEAR+.05&&a===o.s0){const s=a-.01;
@@ -653,6 +656,7 @@ function render(){
  DL.length=0;
  for(const d of decor){if(d.kind==='tunnel'){for(let a=Math.max(d.s0,Math.floor((cam.s)/4)*4);a<d.s1;a+=4){const b=Math.min(a+4,d.s1);if(a>cam.s+FAR)break;const first=a===d.s0;
    add(a,5,()=>{box(-5.5,-4.85,0,7.2,a,b,C.tunnel,{noFront:!first});box(4.85,5.5,0,7.2,a,b,C.tunnel,{noFront:!first});box(-5.5,5.5,6.6,7.6,a,b,C.tunnel,{noFront:!first,bot:hexc('#3e2723')});});}}
+  else if(d.kind==='fence'){const x=d.side*4.75;for(let a=Math.max(d.s0,Math.floor(cam.s/4)*4);a<d.s1;a+=4){if(a>cam.s+FAR)break;const A=a,b=Math.min(a+4,d.s1);add(Math.max(A,cam.s),Math.abs(x-cam.x),()=>box(x-.08,x+.08,0,.9,A,b,C.fence,{noFront:A!==d.s0}));}}
   else{const s=d.s0??d.s;add(s,Math.abs((d.x0??d.x)-cam.x),()=>drawDecor(d));}}
  for(const o of obs){if(o.s1<cam.s||o.s0>cam.s+FAR)continue;const lat=Math.abs(LANES[o.lane]-cam.x);
   if(o.kind==='train'){for(let a=o.s0;a<o.s1;a+=4){if(a+4<cam.s)continue;if(a>cam.s+FAR)break;const b=Math.min(a+4,o.s1),A=a,first=a===o.s0;add(Math.max(a,cam.s),lat,()=>drawTrainSeg(o,A,b,first||A<cam.s+NEAR));}}

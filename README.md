@@ -42,4 +42,4 @@ Keine Installation, kein Konto nötig – läuft auf Handy, iPad und PC. 🎮
 
 ---
 
-Version 0.1 Open Beta
+Version 0.1.1 Open Beta
