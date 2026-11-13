@@ -91,14 +91,14 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 </div>
 <div id="ov"></div>
 <div id="toast"></div>
-<div id="ver">v0.1.4 Open Beta</div>
+<div id="ver">v0.1.5 Open Beta</div>
 
 <script>
 'use strict';
 /* =========================================================
    Rail Rush – Endless Runner (eigene Pseudo-3D-Engine, Canvas 2D)
    ========================================================= */
-const VERSION='0.1.4 Open Beta';
+const VERSION='0.1.5 Open Beta';
 const cv=document.getElementById('c'), ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,F=600,HY=200;
 function resize(){DPR=Math.min(window.devicePixelRatio||1,1.75);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);F=Math.min(W*0.95,H*0.95);}
@@ -250,13 +250,15 @@ const PAT={
   addTrain(r,s+11,a);addTrain(r,s+11+a+g,b);coinLine(r,s+3,s+9+a);coinArc(r,s+11+a+g/2,ROOF);coinLine(r,s+11+a+g+3,s+9+a+g+b);
   const o2=lanes[1];addTrain(o2,s+16+ri(6),a+b-8);if(rnd()<.4+d*.4)addTrain(lanes[2],s+8,20+ri(15));
   return{len:11+a+g+b+12,free:r};},
- moving(s,d){const lanes=shuffle([0,1,2]);const m=lanes[0];const len=16+ri(12);addTrain(m,s+72,len,{moving:true,v:7+d*9});
+ moving(s,d){const lanes=shuffle([0,1,2]);const m=lanes[0];const len=18+ri(14);const mv=()=>9+d*9+rnd()*4;
+  addTrain(m,s+95,len,{moving:true,v:mv()});
+  if(rnd()<.25+d*.4){addTrain(lanes[1],s+150,len,{moving:true,v:mv()});coinLine(lanes[2],s+6,s+60);return{len:150+len+8,free:lanes[2]};}
   if(rnd()<.5+d*.35)addTrain(lanes[1],s+18,24+ri(20));else coinLine(lanes[1],s+10,s+30);
-  coinLine(lanes[2],s+6,s+42);return{len:72+len+8,free:lanes[2]};}
+  coinLine(lanes[2],s+6,s+50);return{len:95+len+8,free:lanes[2]};}
 };
 function genChunk(s){
  const d=Math.min(1,s/4500);
- const k=wpick([['coins',1.1-d*.8],['bars',1.4],['wall',.6+d*.6],['trains',1+d*1.1],['ramp',1+d*.6],['moving',s>450?.35+d*1.1:0],['hop',s>800?.3+d*.9:0]]);
+ const k=wpick([['coins',1.1-d*.8],['bars',1.4],['wall',.6+d*.6],['trains',1+d*1.1],['ramp',1+d*.6],['moving',s>120?.7+d*1.3:0],['hop',s>800?.3+d*.9:0]]);
  const r=PAT[k](s,d);
  // Power-ups, Schlüssel, Mystery Boxen
  const place=(kind,frac)=>{const ss=s+r.len*frac;clearCoins(r.free,ss-1.6,ss+1.6);items.push({kind,x:LANES[r.free],s:ss,y:topAt(r.free,ss)+0.9,taken:false});};
@@ -311,7 +313,7 @@ function update(dt){
  if(P.roll>0){P.roll-=dt;if(P.roll<=0&&underHigh())P.roll=.12;}
  P.phase+=dt*v*.55;
  // bewegte Züge
- for(const o of obs.slice()){o.ps0=o.s0;o.ps1=o.s1;if(o.moving){if(!o.active&&G.s>o.s0-110){o.active=true;clearLaneFor(o);}if(o.active){o.s0-=o.v*dt;o.s1-=o.v*dt;}}}
+ for(const o of obs.slice()){o.ps0=o.s0;o.ps1=o.s1;if(o.moving){if(!o.active&&G.s>o.s0-150){o.active=true;clearLaneFor(o);if(o.s0-G.s<175){snd(220,.5,'sawtooth',.05);snd(277,.5,'sawtooth',.05);}}if(o.active){o.s0-=o.v*dt;o.s1-=o.v*dt;}}}
  collide(prev);
  if(G.state!=='run')return;
  // Münzen
@@ -331,8 +333,8 @@ function update(dt){
 }
 const curMult=()=>(baseMult()+(G.sbActive?5:0))*(pw.double>0?2:1);
 function clearLaneFor(t){const x=LANES[t.lane];
- obs=obs.filter(o=>o===t||o.lane!==t.lane||o.s1<G.s+3||o.s0>t.s0);
- coins=coins.filter(c=>Math.abs(c.x-x)>.5||c.s<G.s+3||c.s>t.s0);items=items.filter(i=>Math.abs(i.x-x)>.5||i.s<G.s+3||i.s>t.s0);}
+ obs=obs.filter(o=>o===t||o.lane!==t.lane||o.s1<G.s+45||o.s0>t.s0);
+ coins=coins.filter(c=>Math.abs(c.x-x)>.5||c.s<G.s+45||c.s>t.s0);items=items.filter(i=>Math.abs(i.x-x)>.5||i.s<G.s+45||i.s>t.s0);}
 function underHigh(){for(const o of obs)if(o.kind==='bar'&&!isLow(o.type)&&Math.abs(P.x-LANES[o.lane])<1.4&&G.s+0.4>o.s0&&G.s-0.4<o.s1)return true;return false;}
 function collide(prev){
  if(flying()||G.state!=='run'||save.god)return;
@@ -662,6 +664,7 @@ function drawTrainSeg(o,a,b,first){
   box(x0+.1,x1-.1,.3,.62,a-.18,a,hexc('#37474f'));
   const blink=o.moving&&(G.t*6|0)%2;const lc=o.moving?(blink?'#ffffff':'#fff59d'):'#ffe0b2';
   circ(x0+.42,.9,s2,.16,lc);circ(x1-.42,.9,s2,.16,lc);circ(x0+.42,.9,s2,.08,'#fff');circ(x1-.42,.9,s2,.08,'#fff');
+  if(o.moving&&o.active){ctx.globalAlpha=.18;ctx.fillStyle='#fff9c4';const g1=P3(x0+.2,.02,s2),g2=P3(x1-.2,.02,s2),g3=P3(x+1.4,.02,Math.max(cam.s+NEAR,s2-9)),g4=P3(x-1.4,.02,Math.max(cam.s+NEAR,s2-9));ctx.beginPath();ctx.moveTo(...g1);ctx.lineTo(...g2);ctx.lineTo(...g3);ctx.lineTo(...g4);ctx.fill();ctx.globalAlpha=1;}
   if(o.moving){ctx.globalAlpha=.3;circ(x0+.42,.9,s2,.5,'#fff59d');circ(x1-.42,.9,s2,.5,'#fff59d');ctx.globalAlpha=1;}}
 }
 function drawRamp(o){
